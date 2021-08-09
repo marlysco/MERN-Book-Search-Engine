@@ -1,10 +1,23 @@
 const express = require('express');
+const { ApolloSever } = requiere('apollo-server-express')
 const path = require('path');
 const db = require('./config/connection');
-const routes = require('./routes');
+const { typeDefs, resolvers } = require('./squemas');
+const { authMiddleware } = require('./utils/auth')
+// const routes = require('./routes');
 
-const app = express();
+
 const PORT = process.env.PORT || 3001;
+const app = express();
+
+//Implement the Apollo Server and apply it to the Express server as middleware.
+const server = new ApolloSever({
+  typeDefs,
+  resolvers,
+  context: authMiddleware,
+});
+
+server.applyMiddleware({ app })
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -14,7 +27,12 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/build')));
 }
 
-app.use(routes);
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/build/index.html'));
+});
+
+
+// app.use(routes);
 
 db.once('open', () => {
   app.listen(PORT, () => console.log(`🌍 Now listening on localhost:${PORT}`));
